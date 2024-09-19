@@ -3,16 +3,24 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Button } from 'react-native-paper';
 import { formatTime } from "../services/FormataHora";
 
-// Definindo os tempos como constantes
-const WORK_TIME = 1500; // Tempo de trabalho em segundos (25 minutos)
-const PAUSE_TIME = 300; // Tempo de pausa em segundos (5 minutos)
-
-export const TimerView = () => {
+export const TimerView = ({ navigation }) => {
     const [timer, setTimer] = useState({
-        timeLeft: WORK_TIME, // Tempo restante em segundos
-        isRunning: false,   // Se o temporizador está rodando
-        isWorkMode: true    // Se o temporizador está no modo de trabalho
+        workTime: 1500, // 25 minutos em segundos
+        pauseTime: 300,  // 5 minutos em segundos
+        timeLeft: 1500,  // Começa no tempo de trabalho
+        isRunning: false,
+        isWorkMode: true
     });
+
+    // Função para alternar entre o modo de trabalho e pausa
+    const switchMode = useCallback(() => {
+        setTimer(prevTimer => ({
+            ...prevTimer,
+            isRunning: false,
+            isWorkMode: !prevTimer.isWorkMode,
+            timeLeft: prevTimer.isWorkMode ? prevTimer.pauseTime : prevTimer.workTime
+        }));
+    }, []);
 
     // Função para atualizar o tempo restante
     const updateTimer = useCallback(() => {
@@ -22,29 +30,20 @@ export const TimerView = () => {
         }));
     }, []);
 
-    // Função para alternar entre o modo de trabalho e o modo de pausa
-    const switchMode = useCallback(() => {
-        setTimer(prevTimer => ({
-            ...prevTimer,
-            isRunning: false,
-            isWorkMode: !prevTimer.isWorkMode,
-            timeLeft: prevTimer.isWorkMode ? PAUSE_TIME : WORK_TIME
-        }));
-    }, []);
-
+    // Efeito para rodar o temporizador
     useEffect(() => {
         let interval = null;
 
         if (timer.isRunning && timer.timeLeft > 0) {
-            interval = setInterval(updateTimer, 1000); // Atualiza o tempo a cada segundo
+            interval = setInterval(updateTimer, 1000);
         } else if (timer.timeLeft === 0) {
-            switchMode(); // Alterna o modo quando o tempo acaba
+            switchMode();
         }
 
-        return () => clearInterval(interval); // Limpa o intervalo quando o componente desmonta ou o temporizador pausa
+        return () => clearInterval(interval);
     }, [timer.isRunning, timer.timeLeft, updateTimer, switchMode]);
 
-    // Função para iniciar/pause o temporizador
+    // Função para iniciar ou pausar o temporizador
     const playPause = () => {
         setTimer(prevTimer => ({
             ...prevTimer,
@@ -54,15 +53,31 @@ export const TimerView = () => {
 
     // Função para redefinir o temporizador
     const reset = () => {
-        setTimer({
-            timeLeft: WORK_TIME,
+        setTimer(prevTimer => ({
+            ...prevTimer,
             isRunning: false,
-            isWorkMode: true
-        });
+            isWorkMode: true,
+            timeLeft: prevTimer.workTime
+        }));
     };
 
+    // Função para atualizar os tempos de trabalho e pausa
+    const saveSettings = (newWorkTime, newPauseTime) => {
+        setTimer(prevTimer => ({
+            ...prevTimer,
+            workTime: newWorkTime,
+            pauseTime: newPauseTime,
+            timeLeft: prevTimer.isWorkMode ? newWorkTime : newPauseTime
+        }));
+    };
+
+    // Navegação para a página de configuração
     const handleConfig = () => {
-        // Navegação para a tela de configuração (dependendo da implementação)
+        navigation.navigate('Config', {
+            workTime: timer.workTime,
+            pauseTime: timer.pauseTime,
+            saveSettings: saveSettings // Passa a função de salvar
+        });
     };
 
     return (
